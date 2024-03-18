@@ -1,0 +1,172 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+## TODO:
+##workflow_dispatch:
+##  inputs:
+##    tag:
+##      description: 'Tag to create a release'
+##      required: true
+
+jobs:
+  build:
+    name: Release binary
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset_suffix: .deb.gz
+            cross: false
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            asset_suffix: .deb.gz
+            cross: true
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+            asset_suffix: .zip
+            cross: true
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset_suffix: .zip
+            cross: false
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            asset_suffix: .zip
+            cross: false
+    env:
+      asset_prefix: VRCCanvas
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # Caching the git-lfs repository to reduce the bandwidth usage.
+      - name: Checkout repository
+        uses: nschloe/action-cached-lfs-checkout@v1
+
+      # Installing the linux toochain because `cross` command on linux is used for Windows compilation.
+      - name: "Install stable toolchain (when `matrix.cross` is `true`)."
+        if: ${{ matrix.cross }}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          target: x86_64-unknown-linux-gnu
+
+      - name: "Install stable toolchain (when `matrix.cross` is `false`)."
+        if: (! ${{ matrix.cross }})
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          target: ${{ matrix.target }}
+
+      - name: Set `docker` as the container engine of `cross`.
+        if: ${{ matrix.cross }}
+        run: |
+          echo "CROSS_CONTAINER_ENGINE=docker" >> "$GITHUB_ENV"
+
+      # Caching the build cache to reduce the compilation time (when `matrix.cross` is `false`).
+      # This project uses `cross` to compile to non-native targets. And this action not supported. It's why there's nothing effective even if it uses it.
+      - name: "Rust Cache (when `matrix.cross` is `false`)."
+        if: (! ${{ matrix.cross }})
+        uses: Swatinem/rust-cache@v2.3.0
+
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        if: ${{ matrix.cross }}
+        # Ignore the failure of a step and avoid terminating the job.
+        continue-on-error: true
+
+      # Installing cargo-bundle to bundle binaries.
+      # FIXME: cargo-bundle is not supported using with `cross` command. So it couldn't bundle Windows' msi on linux.
+      - name: Install cargo-bundle to bundle binaries.
+        if: (! endsWith(matrix.target, '-windows-gnu') || ! ${{ matrix.cross }})
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-bundle --verbose
+
+      # Building the release binary for Windows with all features enabled using `cross` command on x86_64-linux.
+      - name: Release build with all features (when the target is Windows).
+        uses: actions-rs/cargo@v1
+        if: endsWith(matrix.target, '-windows-gnu')
+        with:
+          use-cross: true 
+          command: build
+          args: --release --target ${{ matrix.target }} --all-features
+
+      # Building the release bundle for the target-specific format with `cargo-bundle` command natively on x86_64-linu.
+      - name: "Build and Bundle deps with all features (when the target is not Windows). (without `cross`)"
+        uses: actions-rs/cargo@v1
+        if: (! endsWith(matrix.target, '-windows-gnu') && ! ${{ matrix.cross }})
+        with:
+          command: bundle
+          args: --release --target ${{ matrix.target }} --all-features
+
+      # Building the release bundle for the target-specific format with `cargo-bundle` command using `cross` command on x86_64-linux.
+      # NOTE: `cargo-bundle` should be invoked in `cross` container as the cargo runner command. It needs to be defined in `Cross.toml` as a runner.
+      - name: "Build and Bundle deps with all features (when the target is not Windows). (with `cross`)"
+        uses: actions-rs/cargo@v1
+        if: (! endsWith(matrix.target, '-windows-gnu') && ${{ matrix.cross }})
+        with:
+          use-cross: true 
+          command: run
+          args: -- --release --target ${{ matrix.target }} --all-features
+
+      # Showing the build result.
+
+      # Installing `tre` command to show the build result.
+      - name: Install tre command
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: tre-command
+
+      - name: Show the build result
+        env:
+          MD_CODEBLOCK: "```"
+        run: |
+          echo "# ${{ matrix.target }} build result:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo ""${MD_CODEBLOCK}"bash" >> "$GITHUB_STEP_SUMMARY"
+          tre -s target/ -E ".+/(incremental|deps|build)/"  >> "$GITHUB_STEP_SUMMARY"
+          echo "${MD_CODEBLOCK}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set the release version
+        run: |
+          echo "version=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")" >> "$GITHUB_ENV"
+
+      - name: Set the asset name
+        run: |
+          echo "asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}" >> "$GITHUB_ENV"
+
+      # Compressing the release binaries or bundles in order to upload them as a single file.
+      - name: Compress binaries
+        if: endsWith(matrix.target, '-linux-gnu')
+        run: |
+          bash -c "gzip -c target/${{ matrix.target }}/release/bundle/deb/*.deb > target/${{ env.asset_name }}"
+
+      - name: Compress binaries
+        if: endsWith(matrix.target, '-windows-gnu')
+        run: |
+          bash -c "zip target/${{ env.asset_name }} target/${{ matrix.target }}/release/*.exe"
+
+      - name: Compress binaries
+        if: endsWith(matrix.target, '-apple-darwin')
+        run: |
+          bash -c "zip target/${{ env.asset_name }} target/${{ matrix.target }}/release/bundle/osx/*.app"
+
+      # Uploading the release binaries or bundles to the release page.
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@2.1.1
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/${{ env.asset_name }}
+          asset_name: ${{ env.asset_name }}
+          tag: ${{ github.ref }}
+          overwrite: true

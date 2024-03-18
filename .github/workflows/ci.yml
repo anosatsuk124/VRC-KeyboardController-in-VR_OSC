@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Run checks and tests
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            cross: false
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            cross: true
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+            cross: true
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            cross: false
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            cross: false
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            cross: false
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # Caching the git-lfs repository to reduce the bandwidth usage.
+      - name: Checkout repository
+        uses: nschloe/action-cached-lfs-checkout@v1
+
+      # Installing the linux toochain because `cross` command on linux is used for Windows compilation.
+      - name: Install stable toolchain (when `matrix.cross` is `true`).
+        if: ${{ matrix.cross }}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          target: x86_64-unknown-linux-gnu
+
+      - name: Install stable toolchain (when `matrix.cross` is `false`).
+        if: (! ${{ matrix.cross }})
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          target: ${{ matrix.target }}
+
+      - name: Run checks
+        uses: actions-rs/cargo@v1
+        if: ${{ matrix.cross }}
+        with:
+          use-cross: ${{ matrix.cross }} 
+          command: check
+          args: --verbose --target ${{ matrix.target }} --all-features
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        if: ${{ matrix.cross }}
+        with:
+          use-cross: ${{ matrix.cross }} 
+          command: test
+          args: --verbose --target ${{ matrix.target }} --all-features
+

@@ -1,0 +1,19 @@
+FROM rust:latest
+
+RUN cargo install cargo-bundle
+
+RUN apt-get update && \
+    apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev -y
+
+WORKDIR /app
+
+COPY . .
+
+ARG FLAGS
+
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/app/target \
+    cargo bundle ${FLAGS} && \
+    mkdir dist && \
+    /bin/sh -c "mv /app/target/**/**/bundle /app/dist/"
+
