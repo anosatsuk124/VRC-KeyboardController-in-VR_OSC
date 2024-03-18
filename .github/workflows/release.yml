@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:
 ## TODO:
 ##workflow_dispatch:
 ##  inputs:
@@ -18,9 +19,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-gnu]
-        cross: [true]
+        os: [ubuntu-latest, windows-latest]
+        target: [x86_64-pc-windows-gnu, x86_64-pc-windows-msvc, x86_64-unknown-linux-gnu]
+        cross: [true, false]
+        exclude:
+          - os: windows-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            cross: true
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-msvc
     env:
       asset_prefix: VRCCanvas
 
@@ -30,6 +38,22 @@ jobs:
       # Caching the git-lfs repository to reduce the bandwidth usage.
       - name: Checkout repository
         uses: nschloe/action-cached-lfs-checkout@v1
+
+      - name: Install Rustup using win.rustup.rs
+        if: matrix.os == 'windows-latest'
+        run: |
+          # Disable the download progress bar which can cause perf issues
+          $ProgressPreference = "SilentlyContinue"
+          Invoke-WebRequest https://win.rustup.rs/ -OutFile rustup-init.exe
+          .\rustup-init.exe -y --default-host=x86_64-pc-windows-msvc --default-toolchain=none
+          del rustup-init.exe
+          rustup target add ${{ matrix.target }}
+        shell: powershell
+
+      - name: Add mingw64 to path for x86_64-gnu
+        run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
+        if: matrix.target == 'x86_64-pc-windows-gnu' && matrix.channel == 'nightly'
+        shell: bash
 
       # Installing the linux toochain because `cross` command on linux is used for Windows compilation.
       - name: "Install stable toolchain (when `matrix.cross` is `true`)."
@@ -83,22 +107,13 @@ jobs:
           args: --release --target ${{ matrix.target }} --all-features
 
       # Building the release bundle for the target-specific format with `cargo-bundle` command natively on x86_64-linu.
-      - name: "Build and Bundle deps with all features (when the target is not Windows). (without `cross`)"
-        uses: actions-rs/cargo@v1
-        if: (! endsWith(matrix.target, '-windows-gnu') && ! ${{ matrix.cross }})
-        with:
-          command: bundle
-          args: --release --target ${{ matrix.target }} --all-features
-
-      # Building the release bundle for the target-specific format with `cargo-bundle` command using `cross` command on x86_64-linux.
-      # NOTE: `cargo-bundle` should be invoked in `cross` container as the cargo runner command. It needs to be defined in `Cross.toml` as a runner.
       - name: "Build and Bundle deps with all features (when the target is not Windows). (with `cross`)"
         uses: actions-rs/cargo@v1
-        if: (! endsWith(matrix.target, '-windows-gnu') && ${{ matrix.cross }})
+        if: (! endsWith(matrix.target, '-windows-gnu'))
         with:
           use-cross: true 
-          command: run
-          args: -- --release --target ${{ matrix.target }} --all-features
+          command: bundle
+          args: --release --target ${{ matrix.target }} --all-features
 
       # Showing the build result.
 
