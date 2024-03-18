@@ -20,7 +20,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-gnu]
-        cross: true
+        cross: [true]
     env:
       asset_prefix: VRCCanvas
 
