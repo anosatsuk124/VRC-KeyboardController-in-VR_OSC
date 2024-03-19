@@ -180,6 +180,7 @@ jobs:
         uses: svenstaro/upload-release-action@2.1.1
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file_glob: target/${{ env.asset_name }}*
+          file_glob: true
+          file: target/${{ env.asset_name }}*
           tag: ${{ github.ref }}
           overwrite: true
