@@ -109,7 +109,6 @@ jobs:
         uses: actions-rs/cargo@v1
         if: startsWith(matrix.target, 'x86_64-pc-windows')
         with:
-          use-cross: true
           command: build
           args: --release --target ${{ matrix.target }} --features release
 
