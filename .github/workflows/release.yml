@@ -109,7 +109,7 @@ jobs:
         uses: actions-rs/cargo@v1
         if: startsWith(matrix.target, 'x86_64-pc-windows')
         with:
-          command: bundle
+          command: build
           args: --release --target ${{ matrix.target }} --features release
 
       # Building the release bundle for the target-specific format with `cargo-bundle` command natively on x86_64-linu.
@@ -159,18 +159,21 @@ jobs:
         run: |
           mv target/${{ matrix.target }}/release/bundle/deb/*.deb target/${{ env.asset_name_deb }}
         shell: bash
+        continue-on-error: true
 
       - name: Compress binaries
         if: startsWith(matrix.target, 'x86_64-pc-windows')
         run: |
           mv target/${{ matrix.target }}/release/bundle/msi/*.msi target/${{ env.asset_name_msi }}
         shell: bash
+        continue-on-error: true
 
       - name: Compress binaries
         if: startsWith(matrix.target, 'x86_64-pc-windows')
         run: |
           mv target/${{ matrix.target }}/release/vrc-keyboard.exe target/${{ env.asset_name_exe }}
         shell: bash
+        continue-on-error: true
 
       # Uploading the release binaries or bundles to the release page.
       - name: Upload binaries to release
