@@ -149,22 +149,22 @@ jobs:
       - name: Compress binaries
         if: endsWith(matrix.target, '-linux-gnu')
         run: |
-          echo "asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}.deb" >> "$GITHUB_ENV"
-          bash -c "cat target/${{ matrix.target }}/release/bundle/deb/*.deb > target/${{ env.asset_name }}"
+          echo 'asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}.deb' >> $GITHUB_ENV
+          cat target/${{ matrix.target }}/release/bundle/deb/*.deb > target/${{ env.asset_name }}
         shell: bash
 
       - name: Compress binaries
         if: startsWith(matrix.target, 'x86_64-pc-windows')
         run: |
-          echo "asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-installer.msi" >> "$GITHUB_ENV"
-          bash -c "cat target/${{ env.asset_name }}/release/bundle/msi/*.msi > target/${{ env.asset_name }}"
+          echo 'asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-installer.msi' >> $GITHUB_ENV
+          cat target/${{ env.asset_name }}/release/bundle/msi/*.msi > target/${{ env.asset_name }}
         shell: bash
 
       - name: Compress binaries
         if: startsWith(matrix.target, 'x86_64-pc-windows')
         run: |
-          echo "asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-portable.exe" >> "$GITHUB_ENV"
-          bash -c "cat target/${{ env.asset_name }}/release/vrc-keyboard.exe > target/${{ env.asset_name }}"
+          echo 'asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-portable.exe' >> $GITHUB_ENV
+          cat target/${{ env.asset_name }}/release/vrc-keyboard.exe > target/${{ env.asset_name }}
         shell: bash
 
       # Uploading the release binaries or bundles to the release page.
