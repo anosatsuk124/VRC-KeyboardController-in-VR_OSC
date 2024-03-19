@@ -145,26 +145,38 @@ jobs:
           echo "version=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")" >> "$GITHUB_ENV"
         shell: bash
 
+      - name: Set the asset names
+        if: endsWith(matrix.target, '-linux-gnu')
+        run: |
+          echo 'asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}.deb' >> $GITHUB_ENV
+
+      - name: Set the asset names
+        if: startsWith(matrix.target, 'x86_64-pc-windows')
+        run: |
+          echo 'asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-installer.msi' >> $GITHUB_ENV
+      - name: Set the asset names
+        if: startsWith(matrix.target, 'x86_64-pc-windows')
+        run: |
+          echo 'asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-portable.exe' >> $GITHUB_ENV
+        shell: bash
+
       # Compressing the release binaries or bundles in order to upload them as a single file.
       - name: Compress binaries
         if: endsWith(matrix.target, '-linux-gnu')
         run: |
-          echo 'asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}.deb' >> $GITHUB_ENV
-          cat target/${{ matrix.target }}/release/bundle/deb/*.deb > target/${{ env.asset_name }}
+          mv target/${{ matrix.target }}/release/bundle/deb/*.deb > target/${{ env.asset_name_deb }}
         shell: bash
 
       - name: Compress binaries
         if: startsWith(matrix.target, 'x86_64-pc-windows')
         run: |
-          echo 'asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-installer.msi' >> $GITHUB_ENV
-          cat target/${{ env.asset_name }}/release/bundle/msi/*.msi > target/${{ env.asset_name }}
+          mv target/${{ env.asset_name }}/release/bundle/msi/*.msi > target/${{ env.asset_name_msi }}
         shell: bash
 
       - name: Compress binaries
         if: startsWith(matrix.target, 'x86_64-pc-windows')
         run: |
-          echo 'asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-portable.exe' >> $GITHUB_ENV
-          cat target/${{ env.asset_name }}/release/vrc-keyboard.exe > target/${{ env.asset_name }}
+          mv target/${{ env.asset_name }}/release/vrc-keyboard.exe > target/${{ env.asset_name_exe }}
         shell: bash
 
       # Uploading the release binaries or bundles to the release page.
@@ -172,7 +184,6 @@ jobs:
         uses: svenstaro/upload-release-action@2.1.1
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/${{ env.asset_name }}
-          asset_name: ${{ env.asset_name }}
+          file_glob: target/${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}*
           tag: ${{ github.ref }}
           overwrite: true
