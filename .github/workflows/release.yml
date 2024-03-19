@@ -116,7 +116,7 @@ jobs:
       # Building the release bundle for the target-specific format with `cargo-bundle` command natively on x86_64-linu.
       - name: "Build and Bundle deps with all features (when the target is not Windows). (with `cross`)"
         uses: actions-rs/cargo@v1
-        if: ! startsWith(matrix.target, 'x86_64-pc-windows')
+        if: (! startsWith(matrix.target, 'x86_64-pc-windows'))
         with:
           use-cross: true
           command: bundle
