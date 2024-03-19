@@ -6,12 +6,16 @@ authors = ["Satsuki Akiba <anosatsuk124@gmail.com>"]
 description = "An OSC tool to control VRChat with keyboard in VR mode."
 license = "Apache-2.0"
 build = "build.rs"
-default-run = "xtasks"
+default-run = "vrc-keyboard"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 required-features = ["default"]
+
+[[bin]]
+name = "vrc-keyboard"
+required-features = ["release"]
 
 [[bin]]
 name = "xtasks"
@@ -75,7 +79,7 @@ deb_depends = [
   "libxkbcommon-dev",
   "libssl-dev",
 ]
-osx_url_schemes = ["dev.anosatsuk124.vrccanvas"]
+osx_url_schemes = ["dev.anosatsuk124.vrc-keyboard"]
 
 [dependencies]
 anyhow = "1.0.71"

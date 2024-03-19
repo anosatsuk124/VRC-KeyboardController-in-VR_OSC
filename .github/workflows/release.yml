@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - '*'
+      - "*"
   workflow_dispatch:
 ## TODO:
 ##workflow_dispatch:
@@ -20,7 +20,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        target: [x86_64-pc-windows-gnu, x86_64-pc-windows-msvc, x86_64-unknown-linux-gnu]
+        target:
+          [
+            x86_64-pc-windows-gnu,
+            x86_64-pc-windows-msvc,
+            x86_64-unknown-linux-gnu,
+          ]
         cross: [true, false]
         exclude:
           - os: windows-latest
@@ -29,8 +34,10 @@ jobs:
             cross: true
           - os: ubuntu-latest
             target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            cross: false
     env:
-      asset_prefix: VRCCanvas
+      asset_prefix: VRCKeyboard
 
     runs-on: ${{ matrix.os }}
 
@@ -52,7 +59,7 @@ jobs:
 
       - name: Add mingw64 to path for x86_64-gnu
         run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
-        if: matrix.target == 'x86_64-pc-windows-gnu' && matrix.channel == 'nightly'
+        if: matrix.target == 'x86_64-pc-windows-gnu' && matrix.channel == 'stable'
         shell: bash
 
       # Installing the linux toochain because `cross` command on linux is used for Windows compilation.
@@ -91,7 +98,7 @@ jobs:
       # Installing cargo-bundle to bundle binaries.
       # FIXME: cargo-bundle is not supported using with `cross` command. So it couldn't bundle Windows' msi on linux.
       - name: Install cargo-bundle to bundle binaries.
-        if: (! endsWith(matrix.target, '-windows-gnu') || ! ${{ matrix.cross }})
+        if: (! ${{ matrix.cross }})
         uses: actions-rs/cargo@v1
         with:
           command: install
@@ -100,20 +107,20 @@ jobs:
       # Building the release binary for Windows with all features enabled using `cross` command on x86_64-linux.
       - name: Release build with all features (when the target is Windows).
         uses: actions-rs/cargo@v1
-        if: endsWith(matrix.target, '-windows-gnu')
+        if: startsWith(matrix.target, 'x86_64-pc-windows')
         with:
-          use-cross: true 
+          use-cross: true
           command: build
-          args: --release --target ${{ matrix.target }} --all-features
+          args: --release --target ${{ matrix.target }} --features release
 
       # Building the release bundle for the target-specific format with `cargo-bundle` command natively on x86_64-linu.
       - name: "Build and Bundle deps with all features (when the target is not Windows). (with `cross`)"
         uses: actions-rs/cargo@v1
-        if: (! endsWith(matrix.target, '-windows-gnu'))
+        if: ! startsWith(matrix.target, 'x86_64-pc-windows')
         with:
-          use-cross: true 
+          use-cross: true
           command: bundle
-          args: --release --target ${{ matrix.target }} --all-features
+          args: --release --target ${{ matrix.target }} --features release
 
       # Showing the build result.
 
@@ -133,30 +140,36 @@ jobs:
           echo ""${MD_CODEBLOCK}"bash" >> "$GITHUB_STEP_SUMMARY"
           tre -s target/ -E ".+/(incremental|deps|build)/"  >> "$GITHUB_STEP_SUMMARY"
           echo "${MD_CODEBLOCK}" >> "$GITHUB_STEP_SUMMARY"
+        shell: bash
 
       - name: Set the release version
         run: |
           echo "version=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")" >> "$GITHUB_ENV"
+        shell: bash
 
       - name: Set the asset name
         run: |
           echo "asset_name=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}" >> "$GITHUB_ENV"
+        shell: bash
 
       # Compressing the release binaries or bundles in order to upload them as a single file.
       - name: Compress binaries
         if: endsWith(matrix.target, '-linux-gnu')
         run: |
-          bash -c "gzip -c target/${{ matrix.target }}/release/bundle/deb/*.deb > target/${{ env.asset_name }}"
+          bash -c "cat target/${{ matrix.target }}/release/bundle/deb/*.deb > target/${{ env.asset_name }}.deb"
+        shell: bash
 
       - name: Compress binaries
-        if: endsWith(matrix.target, '-windows-gnu')
+        if: startsWith(matrix.target, 'x86_64-pc-windows')
         run: |
-          bash -c "zip target/${{ env.asset_name }} target/${{ matrix.target }}/release/*.exe"
+          bash -c "cat target/${{ env.asset_name }}/release/bundle/msi/*.msi > target/${{ env.asset_name }}-installer.msi"
+        shell: bash
 
       - name: Compress binaries
-        if: endsWith(matrix.target, '-apple-darwin')
+        if: startsWith(matrix.target, 'x86_64-pc-windows')
         run: |
-          bash -c "zip target/${{ env.asset_name }} target/${{ matrix.target }}/release/bundle/osx/*.app"
+          bash -c "cat target/${{ env.asset_name }}/release/vrc-keyboard.exe > target/${{ env.asset_name }}-portable.exe"
+        shell: bash
 
       # Uploading the release binaries or bundles to the release page.
       - name: Upload binaries to release
