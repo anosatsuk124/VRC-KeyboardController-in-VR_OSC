@@ -137,7 +137,6 @@ jobs:
           echo "# ${{ matrix.target }} build result:" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo ""${MD_CODEBLOCK}"bash" >> "$GITHUB_STEP_SUMMARY"
-          tre -- -s target/ -E ".+/(incremental|deps|build)/"  >> "$GITHUB_STEP_SUMMARY"
           echo "${MD_CODEBLOCK}" >> "$GITHUB_STEP_SUMMARY"
         shell: bash
 
