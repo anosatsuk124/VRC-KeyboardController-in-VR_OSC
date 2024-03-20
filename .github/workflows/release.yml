@@ -116,7 +116,7 @@ jobs:
       # Building the release binary for Windows with all features enabled using `cross` command on x86_64-linux.
       - name: Release build with all features (when the target is Windows).
         uses: actions-rs/cargo@v1
-        if: startsWith(matrix.target, 'x86_64-pc-windows')
+        if: (! ${{matrix.cross}} )
         with:
           command: build
           args: --release --target ${{ matrix.target }} --features release
@@ -124,7 +124,7 @@ jobs:
       # Building the release bundle for the target-specific format with `cargo-bundle` command natively on x86_64-linu.
       - name: "Build and Bundle deps with all features (when the target is not Windows). (with `cross`)"
         uses: actions-rs/cargo@v1
-        if: (! startsWith(matrix.target, 'x86_64-pc-windows'))
+        if: ( ${{matrix.cross}} )
         with:
           use-cross: true
           command: bundle
@@ -160,7 +160,7 @@ jobs:
           echo 'asset_name_deb=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}.deb' >> $GITHUB_ENV
           echo 'asset_name_msi=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-installer.msi' >> $GITHUB_ENV
           echo 'asset_name_exe=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-portable.exe' >> $GITHUB_ENV
-          echo 'asset_name_dmg=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}.dmg' >> $GITHUB_ENV
+          echo 'asset_name_app=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}.app' >> $GITHUB_ENV
         shell: bash
 
       # Compressing the release binaries or bundles in order to upload them as a single file.
@@ -188,7 +188,7 @@ jobs:
       - name: Compress binaries
         if: endsWith(matrix.target, 'darwin')
         run: |
-          mv target/${{ matrix.target }}/release/*.dmg target/${{ env.asset_name_dmg }}
+          mv target/${{ matrix.target }}/release/*.app target/${{ env.asset_name_app }}
 
       # Uploading the release binaries or bundles to the release page.
       - name: Upload binaries to release
