@@ -36,6 +36,13 @@ jobs:
             target: x86_64-pc-windows-msvc
           - os: ubuntu-latest
             cross: false
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            cross: false
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            cross: false
     env:
       asset_prefix: VRCKeyboard
 
@@ -151,6 +158,7 @@ jobs:
           echo 'asset_name_deb=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}.deb' >> $GITHUB_ENV
           echo 'asset_name_msi=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-installer.msi' >> $GITHUB_ENV
           echo 'asset_name_exe=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}-portable.exe' >> $GITHUB_ENV
+          echo 'asset_name_dmg=${{ env.asset_prefix }}-${{ matrix.target }}-${{ env.version }}${{ matrix.asset_suffix }}.dmg' >> $GITHUB_ENV
         shell: bash
 
       # Compressing the release binaries or bundles in order to upload them as a single file.
@@ -174,6 +182,11 @@ jobs:
           mv target/${{ matrix.target }}/release/vrc-keyboard.exe target/${{ env.asset_name_exe }}
         shell: bash
         continue-on-error: true
+
+      - name: Compress binaries
+        if: endsWith(matrix.target, 'darwin')
+        run: |
+          mv target/${{ matrix.target }}/release/*.dmg target/${{ env.asset_name_dmg }}
 
       # Uploading the release binaries or bundles to the release page.
       - name: Upload binaries to release
