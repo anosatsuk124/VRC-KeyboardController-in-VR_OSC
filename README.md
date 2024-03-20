@@ -6,11 +6,12 @@
 
 ## 日本語
 
+> [!IMPORTANT]
+> このアプリは署名を行っていないため、警告が出る可能性があります。
+
 このアプリケーションはVRChatのOSC機能を利用して、VRモードでもキーボードによる操作を両立可能にするものです。
 
 Quest等のハンドトラッキング機能では移動操作等が困難になりがちですが、VR空間上でのデスクトップオーバレイ (XSOverlayなどの外部アプリケーション) を用いることで、 (コントーラを置いた状態でも) キーボードで作業しながらハンドトラッキングで最低限のVRらしいコミュニケーションをすることが可能となります。
-
-署名を行っていないため、警告が出る可能性があります。
 
 ### 対応操作
 
@@ -30,11 +31,12 @@ Quest等のハンドトラッキング機能では移動操作等が困難にな
 
 ## English
 
+> [!IMPORTANT]
+> This is not signed and it may cause some warnings.
+
 This is an application to control VRChat even if you launch it in VR mode.
 
 In almost all cases, it is too difficult to control the hands-tracking feature with Quest. But it makes your hands-tracking while on the Keyboard more VR-wise and useful.
-
-This is not signed and it may cause some warnings.
 
 ### Compatible Actions
 
