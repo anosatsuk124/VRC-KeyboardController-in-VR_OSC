@@ -35,6 +35,8 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-pc-windows-msvc
           - os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+          - os: ubuntu-latest
             cross: false
         include:
           - os: macos-latest
