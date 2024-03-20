@@ -47,6 +47,8 @@ jobs:
             cross: false
     env:
       asset_prefix: VRCKeyboard
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
 
     runs-on: ${{ matrix.os }}
 
@@ -116,17 +118,18 @@ jobs:
       # Building the release binary for Windows with all features enabled using `cross` command on x86_64-linux.
       - name: Release build with all features (when the target is Windows).
         uses: actions-rs/cargo@v1
-        if: (! ${{matrix.cross}} )
+        if: startsWith(matrix.target, 'x86_64-pc-windows')
         with:
+          use-cross: (! ${{matrix.cross}})
           command: build
           args: --release --target ${{ matrix.target }} --features release
 
       # Building the release bundle for the target-specific format with `cargo-bundle` command natively on x86_64-linu.
       - name: "Build and Bundle deps with all features (when the target is not Windows). (with `cross`)"
         uses: actions-rs/cargo@v1
-        if: ( ${{matrix.cross}} )
+        if: (! startsWith(matrix.target, 'x86_64-pc-windows'))
         with:
-          use-cross: true
+          use-cross: ${{matrix.cross}}
           command: bundle
           args: --release --target ${{ matrix.target }} --features release
 
